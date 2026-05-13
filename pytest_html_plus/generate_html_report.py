@@ -265,9 +265,10 @@ class JSONReporter:
   color: #b36b00;
 }}
       .header.xfailed {{
-  background: #fdebd0;
-  color: #9a3412;
-  border-left: 4px solid #ea580c;
+  /* xfail render giống failed (đỏ) để stakeholder dễ nhìn — exit code vẫn 0 */
+  background: #FBE4E4;
+  color: #8B1E1E;
+  border-left: 4px solid #C62828;
 }}
       .header.error {{
   background: #fdecea;
@@ -946,7 +947,7 @@ class JSONReporter:
     <div class="header-section test-info">
       <span class="toggle"></span>
       <strong>{test["test"]}</strong>
-      <span>— {test["status"].upper()}</span>
+      <span>— {("FAILED" if test["status"] == "xfailed" else test["status"].upper())}</span>
     </div>
     <div class="header-section meta">
       <span class="nodeid-badge" style="display: flex; align-items: center; gap: 6px;">
@@ -992,10 +993,12 @@ class JSONReporter:
         slowest_test_duration = slowest_test.get("duration", 0) if slowest_test else 0
 
         all_green = failed_tests == 0 and error_tests == 0 and xfailed_tests == 0
+        # xfail render như failed về visual nhưng giữ semantic riêng:
+        # - failures_visible = real failed + xfail (đếm tổng số test "đỏ" trên UI)
+        # - khi không có failed thật + chỉ có xfail → vẫn red banner để stakeholder thấy
+        failures_visible = failed_tests + xfailed_tests
         if all_green:
             bg_color, border_color = "#e6f4ea", "#2f7a33"
-        elif failed_tests == 0 and error_tests == 0:
-            bg_color, border_color = "#fdebd0", "#ea580c"  # amber for xfail-only
         else:
             bg_color, border_color = "#fdecea", "#a83232"
 
@@ -1007,9 +1010,8 @@ class JSONReporter:
             "<strong>Bingo!</strong> All your tests passed!"
             if all_green
             else (f"Total tests: {total_tests}, "
-                  f"Failures: {failed_tests}, "
-                  f"Errors: {error_tests}, "
-                  f"XFailed: {xfailed_tests}.")
+                  f"Failures: {failures_visible}, "
+                  f"Errors: {error_tests}.")
         }
               The slowest test was <strong>{slowest_test_name}</strong> at {
             slowest_test_duration:.2f}s.
