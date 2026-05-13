@@ -264,6 +264,11 @@ class JSONReporter:
   background: #fff8e1;
   color: #b36b00;
 }}
+      .header.xfailed {{
+  background: #fdebd0;
+  color: #9a3412;
+  border-left: 4px solid #ea580c;
+}}
       .header.error {{
   background: #fdecea;
   color: #b71c1c;
@@ -788,7 +793,15 @@ class JSONReporter:
                 else (
                     "failed"
                     if test["status"] == "failed"
-                    else "error" if test["status"] == "error" else "skipped"
+                    else (
+                        "error"
+                        if test["status"] == "error"
+                        else (
+                            "xfailed"
+                            if test["status"] == "xfailed"
+                            else "skipped"
+                        )
+                    )
                 )
             )
             screenshot_path = self.find_screenshot_and_copy(test["test"])
@@ -971,28 +984,32 @@ class JSONReporter:
         total_tests = len(self.results)
         failed_tests = sum(1 for t in self.results if t["status"] == "failed")
         error_tests = sum(1 for t in self.results if t["status"] == "error")
+        xfailed_tests = sum(1 for t in self.results if t["status"] == "xfailed")
         slowest_test = max(
             self.results, key=lambda x: x.get("duration", 0), default=None
         )
         slowest_test_name = slowest_test["test"] if slowest_test else "N/A"
         slowest_test_duration = slowest_test.get("duration", 0) if slowest_test else 0
 
+        all_green = failed_tests == 0 and error_tests == 0 and xfailed_tests == 0
+        if all_green:
+            bg_color, border_color = "#e6f4ea", "#2f7a33"
+        elif failed_tests == 0 and error_tests == 0:
+            bg_color, border_color = "#fdebd0", "#ea580c"  # amber for xfail-only
+        else:
+            bg_color, border_color = "#fdecea", "#a83232"
+
         summary_html = f"""
-            <div style="padding: 1rem; background: {
-            "#e6f4ea" if failed_tests == 0 and error_tests == 0 else "#fdecea"
-        }; 
-            border: 1px solid {
-            "#2f7a33" if failed_tests == 0 and
-                         error_tests == 0
-            else "#a83232"
-        }; 
+            <div style="padding: 1rem; background: {bg_color};
+            border: 1px solid {border_color};
             border-radius: 5px; margin-bottom: 1rem;">
               {
             "<strong>Bingo!</strong> All your tests passed!"
-            if failed_tests == 0 and error_tests == 0
+            if all_green
             else (f"Total tests: {total_tests}, "
                   f"Failures: {failed_tests}, "
-                  f"Errors: {error_tests}.")
+                  f"Errors: {error_tests}, "
+                  f"XFailed: {xfailed_tests}.")
         }
               The slowest test was <strong>{slowest_test_name}</strong> at {
             slowest_test_duration:.2f}s.

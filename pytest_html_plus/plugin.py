@@ -235,7 +235,13 @@ def pytest_runtest_makereport(item, call):
 
         should_capture_screenshot = report.when in ("setup", "call") and (
             capture_option == "all"
-            or (capture_option == "failed" and report.outcome == "failed")
+            or (
+                capture_option == "failed"
+                and (
+                    report.outcome == "failed"
+                    or (hasattr(report, "wasxfail") and report.outcome == "skipped")
+                )
+            )
         )
 
         if should_capture_screenshot:
@@ -249,6 +255,20 @@ def pytest_runtest_makereport(item, call):
         status = report.outcome
         if report.when in ("setup", "teardown") and report.failed:
             status = "error"
+        # xfail: pytest set outcome="skipped" + wasxfail attribute when an
+        # @pytest.mark.xfail test actually fails as expected. Promote to "xfailed"
+        # so HTML/JSON báo cáo rõ ràng (không lẫn với real skip).
+        is_xfail = hasattr(report, "wasxfail") and report.outcome == "skipped"
+        if is_xfail:
+            status = "xfailed"
+            # Capture longrepr (traceback) cho xfail để báo cáo có log + screenshot link.
+            if report.longrepr is not None:
+                full_error = str(report.longrepr)
+                error = extract_error_block(error=full_error) or error
+                trace = extract_trace_block(full_error) or trace
+
+        # error/trace: log cho cả real-failed lẫn xfailed (xfailed cũng cần debug info).
+        include_error = report.failed or is_xfail
 
         reporter.log_result(
             test_name=test_name,
@@ -256,8 +276,8 @@ def pytest_runtest_makereport(item, call):
             status=status,
             duration=report.duration,
             attempt=None,
-            error=error if report.failed else None,
-            trace=trace if report.failed else None,
+            error=error if include_error else None,
+            trace=trace if include_error else None,
             markers=[m.name for m in item.iter_markers()],
             filepath=item.location[0],
             lineno=item.location[1],
