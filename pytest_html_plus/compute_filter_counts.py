@@ -11,7 +11,9 @@ def compute_filter_count(results):
         links = test.get("links", [])
         markers = test.get("markers", [])
 
-        if status == "failed" and not flaky:
+        # xfailed render như failed về UI: gộp vào "failed" để filter chip
+        # 'Show only failed tests' khớp banner 'Failures: N'.
+        if status in ("failed", "xfailed") and not flaky:
             filters["failed"] += 1
         if status == "error":
             filters["error"] += 1
@@ -19,8 +21,6 @@ def compute_filter_count(results):
             filters["flaky"] += 1
         if status == "skipped":
             filters["skipped"] += 1
-        if status == "xfailed":
-            filters["xfailed"] += 1
         if not links:
             filters["untracked"] += 1
 
@@ -30,7 +30,7 @@ def compute_filter_count(results):
     total = len(results)
     filters["total"] = total
     filters["passed"] = (
-        total - filters["failed"] - filters["skipped"] - filters["error"] - filters["xfailed"]
+        total - filters["failed"] - filters["skipped"] - filters["error"]
     )
 
     filters["marker_counts"] = dict(marker_counts)

@@ -550,7 +550,8 @@ class JSONReporter:
           errorCheckbox.checked = false;
           testElements.forEach(el => {{
             const header = el.querySelector('.header');
-            const isFailed = header.classList.contains('failed');
+            // xfailed render như failed nên match cả 2 class khi filter "failed"
+            const isFailed = header.classList.contains('failed') || header.classList.contains('xfailed');
             el.style.display = isFailed ? 'block' : 'none';
           }});
         }} else {{
