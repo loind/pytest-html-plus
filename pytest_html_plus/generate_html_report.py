@@ -638,7 +638,8 @@ class JSONReporter:
         document.querySelectorAll('.test').forEach(el => {{
           const header = el.querySelector('.header');
           const markers = el.getAttribute('data-markers').split(',');
-          const isFailed = header.classList.contains('failed');
+          // xfailed render như failed nên đếm vào failed filter
+          const isFailed = header.classList.contains('failed') || header.classList.contains('xfailed');
           const isSkipped = header.classList.contains('skipped');
           const isError = header.classList.contains('error');
 
